@@ -1,0 +1,46 @@
+stages:
+  - build
+  - deploy
+
+
+variables:
+  DOCKER_HOST: tcp://docker:2375/
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  VERS: $CI_COMMIT_SHORT_SHA
+  DOCKER_REGISTRY: <your-repo-adress>
+  AWS_DEFAULT_REGION: <region>
+  APPLICATION: <app-name>
+  PROJECT_NAME: <your gitlab project name>
+  K8S_CONNECTION: <your kubernetes connection name>
+  
+
+before_script:
+  - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  - aws configure set region $AWS_DEFAULT_REGION
+
+## TEST 
+build:
+  image: public.ecr.aws/f0u4e1w8/awscli-kubectl:latest #AWS-KUBECTL-DOCKER public image
+  services:
+  - name: docker:20-dind
+    alias: docker
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+  script:
+    - aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin $DOCKER_REGISTRY
+    - docker build -f Dockerfile -t $DOCKER_REGISTRY/$APPLICATION:$VERS .
+    - docker push $DOCKER_REGISTRY/$APPLICATION:$VERS   
+
+deploy: 
+  image: public.ecr.aws/f0u4e1w8/awscli-kubectl:latest
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"   
+  script:   
+    - kubectl config use-context $PROJECT_NAME:$K8S_CONNECTION
+    - kubectl -n stage set image deployment $APPLICATION $APPLICATION=$DOCKER_REGISTRY/$APPLICATION:$VERS
+  needs: 
+    - build
