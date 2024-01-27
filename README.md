@@ -20,7 +20,7 @@ gitlab gave you token and helm command to install gitlab-agent
 
 # gitlab-agent clusterrole
 
-i recommend that gave gitlab-agent cluster-admin so you can deploy easily with permission.
+i recommend that giving cluster-admin permission for  gitlab-agent so you can deploy easily with permission.
 
 ```
 kubectl create clusterrolebinding gitlab-agent --clusterrole=cluster-admin --serviceaccount=gitlab-agent:gitlab-agent -n gitlab-agent
